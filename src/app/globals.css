@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Desactivar scroll del navegador para tener scroll interno controlado */
+html, body {
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+
 @layer base {
   :root {
     --background: 210 20% 94%;

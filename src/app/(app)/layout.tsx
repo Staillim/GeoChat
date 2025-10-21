@@ -132,7 +132,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <UserNav />
             </header>
         )}
-        <main className={cn("flex-1 overflow-auto", isMobile && 'pb-16', !showHeader && 'h-screen')}>{children}</main>
+        <main className={cn(
+          "flex flex-col",
+          showHeader ? "h-[calc(100vh-56px)] lg:h-[calc(100vh-60px)]" : "h-screen",
+          isMobile && !isChatPage && 'pb-16'
+        )}>{children}</main>
         {isMobile && !isChatPage && <BottomNavBar pathname={pathname} />}
       </SidebarInset>
     </SidebarProvider>
