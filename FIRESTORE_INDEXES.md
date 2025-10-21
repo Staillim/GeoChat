@@ -4,18 +4,13 @@ Este proyecto requiere índices compuestos en Firestore para funcionar correctam
 
 ## Índices Requeridos
 
-### 1. Conversaciones por participante y tiempo
-**Colección:** `conversations`
-- Campo: `participants` (array-contains)
-- Campo: `lastMessageTime` (descendente)
-
-**Propósito:** Permite obtener las conversaciones de un usuario ordenadas por la más reciente.
-
-### 2. Mensajes ordenados por tiempo
+### 1. Mensajes ordenados por tiempo
 **Colección:** `messages` (collection group)
 - Campo: `timestamp` (ascendente)
 
 **Propósito:** Permite obtener los mensajes de cualquier conversación ordenados cronológicamente.
+
+**Nota:** Las conversaciones se ordenan en memoria (client-side) para evitar la necesidad de un índice compuesto `participants` + `lastMessageTime`, que requeriría permisos especiales en las reglas de seguridad.
 
 ## Cómo Crear los Índices
 
@@ -30,14 +25,37 @@ Cuando uses la app, Firebase te mostrará un enlace en la consola cuando intente
 
 ### Opción 3: Consola de Firebase
 1. Ve a Firebase Console → Firestore Database → Índices
-2. Crea un índice compuesto con los campos mencionados arriba
+2. Crea un índice de collection group:
+   - Collection ID: `messages`
+   - Campos: `timestamp` (Ascending)
+   - Scope: Collection group
 
 ## Verificación
 
 Los índices están funcionando correctamente cuando:
-- ✅ Las conversaciones se ordenan por las más recientes
 - ✅ Los mensajes aparecen en orden cronológico
+- ✅ Las conversaciones se ordenan por las más recientes (ordenamiento en cliente)
 - ✅ No hay errores en la consola sobre índices faltantes
+
+## Optimización
+
+### ¿Por qué ordenar conversaciones en memoria?
+
+Firestore no permite usar `orderBy` junto con `array-contains` en la misma query sin un índice compuesto. Además, las reglas de seguridad se vuelven más complejas con queries compuestas.
+
+**Solución adoptada:**
+- Query simple: `where('participants', 'array-contains', userId)`
+- Ordenamiento en JavaScript: `sort()` por `lastMessageTime`
+
+**Ventajas:**
+- ✅ Reglas de seguridad más simples
+- ✅ No requiere índice compuesto
+- ✅ Funciona sin configuración adicional
+- ✅ Performance aceptable (< 100 conversaciones por usuario)
+
+**Desventajas:**
+- ⚠️ Ordenamiento en cliente consume más recursos
+- ⚠️ No escalable para miles de conversaciones
 
 ## Notas
 
