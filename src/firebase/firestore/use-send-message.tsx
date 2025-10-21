@@ -45,6 +45,8 @@ export function useSendMessage() {
         senderId: senderId,
         text: text.trim(),
         timestamp: serverTimestamp(),
+        read: false, // Estado de lectura inicial
+        readAt: null, // Timestamp de cuándo se leyó
       });
 
       // Preparar las actualizaciones de la conversación

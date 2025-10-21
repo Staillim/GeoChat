@@ -256,9 +256,9 @@ service cloud.firestore {
        * @allow (create) Participants can create messages only in active conversations.
        * @allow (get) Any participant can read a message.
        * @allow (list) Any participant can list messages.
-       * @allow (update) No one can update messages (immutable).
+       * @allow (update) Recipients can mark messages as read (update read status only).
        * @allow (delete) No one can delete messages (immutable).
-       * @principle Messages are immutable and require active conversation status.
+       * @principle Messages content is immutable, but read status can be updated by recipient.
        */
       match /messages/{messageId} {
         function isConversationParticipant() {
@@ -270,6 +270,14 @@ service cloud.firestore {
           return get(/databases/$(database)/documents/conversations/$(conversationId)).data.status == 'active';
         }
 
+        function isMarkingAsRead() {
+          // Only allow updating 'read' and 'readAt' fields
+          // Cannot change text, senderId, or timestamp
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt'])
+                 && request.resource.data.read == true
+                 && resource.data.senderId != request.auth.uid; // Can't mark own messages as read
+        }
+
         allow get: if isConversationParticipant();
         allow list: if isConversationParticipant();
         
@@ -278,7 +286,9 @@ service cloud.firestore {
                       && isConversationActive()
                       && request.resource.data.senderId == request.auth.uid;
         
-        allow update: if false; // Messages are immutable
+        // Allow updating only to mark as read
+        allow update: if isConversationParticipant() && isMarkingAsRead();
+        
         allow delete: if false; // Messages are immutable
       }
     }

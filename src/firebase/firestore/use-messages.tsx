@@ -9,6 +9,8 @@ export interface FirestoreMessage {
   senderId: string;
   timestamp: any; // Firestore Timestamp
   senderName?: string;
+  read?: boolean; // Estado de lectura
+  readAt?: any; // Timestamp de lectura
 }
 
 /**
