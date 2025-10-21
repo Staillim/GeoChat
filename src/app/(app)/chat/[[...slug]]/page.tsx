@@ -28,6 +28,7 @@ export default function ChatPage() {
   const { markAsRead } = useMarkAsRead();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const previousMessageCountRef = useRef(0);
 
   // Obtener la conversación
   const conversationRef = useMemoFirebase(() => {
@@ -40,12 +41,29 @@ export default function ChatPage() {
   // Obtener los mensajes
   const { messages, isLoading: isMessagesLoading } = useMessages(conversationId);
 
-  // Auto-scroll cuando lleguen mensajes nuevos
+  // Auto-scroll mejorado - detecta mensajes nuevos
   useEffect(() => {
     if (messages && messages.length > 0) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const isNewMessage = messages.length > previousMessageCountRef.current;
+      previousMessageCountRef.current = messages.length;
+
+      if (isNewMessage) {
+        // Usar setTimeout para asegurar que el DOM se actualice
+        setTimeout(() => {
+          messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+        }, 100);
+      }
     }
   }, [messages]);
+
+  // Scroll inicial cuando se cargan los mensajes por primera vez
+  useEffect(() => {
+    if (!isMessagesLoading && messages && messages.length > 0 && previousMessageCountRef.current === 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'instant', block: 'end' });
+      }, 100);
+    }
+  }, [isMessagesLoading, messages]);
 
   // Marcar mensajes como leídos cuando se abre el chat
   useEffect(() => {
@@ -173,12 +191,20 @@ export default function ChatPage() {
               </div>
             ) : (
               <>
-                {messages.map((message) => {
+                {messages.map((message, index) => {
                   const isSender = message.senderId === user?.uid;
                   const senderName = isSender ? 'Tú' : (message.senderName || 'Usuario');
+                  const isLastMessage = index === messages.length - 1;
 
                   return (
-                  <div key={message.id} className={cn('flex items-end gap-2', isSender ? 'justify-end' : 'justify-start')}>
+                  <div 
+                    key={message.id} 
+                    className={cn(
+                      'flex items-end gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300',
+                      isSender ? 'justify-end' : 'justify-start'
+                    )}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
                       {!isSender && (
                       <Avatar className="h-8 w-8">
                           <AvatarFallback>{senderName.charAt(0).toUpperCase()}</AvatarFallback>
@@ -186,13 +212,14 @@ export default function ChatPage() {
                       )}
                       <div
                       className={cn(
-                          'max-w-xs rounded-lg p-3 text-sm md:max-w-md',
+                          'max-w-xs rounded-lg p-3 text-sm md:max-w-md transition-all',
                           isSender
                           ? 'bg-primary text-primary-foreground'
-                          : 'bg-card'
+                          : 'bg-card border',
+                          isLastMessage && 'ring-2 ring-primary/20 animate-pulse'
                       )}
                       >
-                      <p>{message.text}</p>
+                      <p className="break-words">{message.text}</p>
                       <p className={cn("text-xs mt-1", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
                         {message.timestamp?.toDate?.()?.toLocaleTimeString() || 'Ahora'}
                       </p>

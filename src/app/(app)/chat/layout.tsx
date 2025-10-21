@@ -48,16 +48,18 @@ function ConversationItem({ conv, isActive, currentUserId }: ConversationItemPro
             key={conv.id}
             href={`/chat/${conv.id}`}
             className={cn(
-                "flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent relative",
+                "flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent relative group",
+                "animate-in fade-in slide-in-from-left-2 duration-300",
                 isActive && "bg-accent",
-                isPending && "border-amber-300 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20"
+                isPending && "border-amber-300 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20",
+                hasUnread && !isActive && "border-primary/50 bg-primary/5"
             )}
         >
             {/* Indicador de mensajes no leídos */}
             {hasUnread && !isActive && (
-                <div className="absolute top-2 right-2">
+                <div className="absolute top-2 right-2 animate-in zoom-in duration-200">
                     <div className="relative">
-                        <Badge variant="destructive" className="h-5 min-w-[20px] px-1 flex items-center justify-center text-xs">
+                        <Badge variant="destructive" className="h-5 min-w-[20px] px-1 flex items-center justify-center text-xs animate-pulse">
                             {unreadCount > 99 ? '99+' : unreadCount}
                         </Badge>
                     </div>
@@ -65,13 +67,13 @@ function ConversationItem({ conv, isActive, currentUserId }: ConversationItemPro
             )}
             <div className="flex w-full items-center gap-3">
                 <div className="relative">
-                    <Avatar>
+                    <Avatar className="transition-transform group-hover:scale-110">
                         <AvatarImage src={photoURL || ''} alt={displayName} />
                         <AvatarFallback>{initials}</AvatarFallback>
                     </Avatar>
-                    {/* Indicador de punto rojo */}
+                    {/* Indicador de punto rojo con animación */}
                     {hasUnread && !isActive && (
-                        <div className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-500 rounded-full border-2 border-background" />
+                        <div className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-500 rounded-full border-2 border-background animate-pulse" />
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
