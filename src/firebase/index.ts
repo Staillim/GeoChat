@@ -2,7 +2,7 @@
 
 import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
-import { getAuth, useAuth as useFirebaseAuth } from 'firebase/auth';
+import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore'
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
@@ -45,8 +45,13 @@ export * from './provider';
 export * from './client-provider';
 export * from './firestore/use-collection';
 export * from './firestore/use-doc';
+export * from './firestore/use-users';
+export * from './firestore/use-conversations';
+export * from './firestore/use-messages';
+export * from './firestore/use-search-user-by-pin';
+export * from './firestore/use-send-chat-request';
 export * from './non-blocking-updates';
 export * from './non-blocking-login';
 export * from './errors';
 export * from './error-emitter';
-export * from './auth/use-user';
+// Note: useUser from auth/use-user.tsx debe importarse directamente desde ese archivo

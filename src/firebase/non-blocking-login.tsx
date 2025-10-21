@@ -30,6 +30,11 @@ export function initiateEmailSignUp(authInstance: Auth, firestore: Firestore, em
         pin: pin
       };
 
+      console.log('=== Creating user document ===');
+      console.log('User data:', userData);
+      console.log('PIN generated:', pin);
+      console.log('============================');
+
       // Use the non-blocking function to create the document
       setDocumentNonBlocking(userDocRef, userData, { merge: false });
     })
