@@ -13,16 +13,86 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUser } from '@/firebase/auth/use-user';
 import { Skeleton } from '@/components/ui/skeleton';
+import { doc, setDoc, updateDoc } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
+import { useState } from 'react';
+import { RefreshCw, Copy, Check } from 'lucide-react';
+
+const { firestore } = initializeFirebase();
 
 export default function ProfilePage() {
     const { user, userProfile, isUserLoading } = useUser();
+    const [isRegeneratingPin, setIsRegeneratingPin] = useState(false);
+    const [isCopied, setIsCopied] = useState(false);
 
     // Debug logs
     console.log('=== Profile Page Debug ===');
-    console.log('User:', user);
-    console.log('User Profile:', userProfile);
+    console.log('User UID:', user?.uid);
+    console.log('User Email:', user?.email);
+    console.log('User DisplayName:', user?.displayName);
+    console.log('User Profile (raw):', userProfile);
+    console.log('User Profile exists?:', userProfile !== null && userProfile !== undefined);
+    if (userProfile) {
+        console.log('User Profile keys:', Object.keys(userProfile));
+        console.log('PIN value:', userProfile.pin);
+        console.log('PIN type:', typeof userProfile.pin);
+    }
     console.log('Is Loading:', isUserLoading);
     console.log('========================');
+
+    const regeneratePin = async () => {
+        if (!user) return;
+        
+        setIsRegeneratingPin(true);
+        try {
+            const newPin = Math.floor(100000 + Math.random() * 900000).toString();
+            const userDocRef = doc(firestore, 'users', user.uid);
+            
+            // Primero verificar si el documento existe
+            const { getDoc } = await import('firebase/firestore');
+            const docSnap = await getDoc(userDocRef);
+            
+            if (!docSnap.exists()) {
+                // Si no existe, crear el documento completo
+                console.log('📝 Documento no existe, creándolo...');
+                await setDoc(userDocRef, {
+                    uid: user.uid,
+                    email: user.email,
+                    displayName: user.displayName || user.email?.split('@')[0] || 'Usuario',
+                    photoURL: user.photoURL || null,
+                    pin: newPin,
+                    createdAt: new Date().toISOString(),
+                });
+            } else {
+                // Si existe, solo actualizar el PIN
+                console.log('🔄 Actualizando PIN existente...');
+                await updateDoc(userDocRef, {
+                    pin: newPin
+                });
+            }
+            
+            console.log('✅ PIN regenerado:', newPin);
+            alert(`Nuevo PIN generado: ${newPin}`);
+        } catch (error) {
+            console.error('❌ Error al regenerar PIN:', error);
+            alert('Error al regenerar el PIN: ' + (error as Error).message);
+        } finally {
+            setIsRegeneratingPin(false);
+        }
+    };
+
+    const copyPinToClipboard = async () => {
+        if (pin && pin !== 'No disponible') {
+            try {
+                await navigator.clipboard.writeText(pin);
+                setIsCopied(true);
+                setTimeout(() => setIsCopied(false), 2000);
+            } catch (error) {
+                console.error('Error al copiar PIN:', error);
+                alert('Error al copiar el PIN');
+            }
+        }
+    };
 
     if (isUserLoading) {
         return (
@@ -72,18 +142,14 @@ export default function ProfilePage() {
     const email = user.email || '';
     const bio = userProfile?.bio || '';
     
-    // Verificar el PIN con más detalle
-    let pin = 'No disponible';
-    if (userProfile) {
-        if (userProfile.pin) {
-            pin = userProfile.pin;
-        } else {
-            console.warn('El perfil existe pero no tiene PIN:', userProfile);
-            pin = 'PIN no configurado';
-        }
-    } else {
-        console.warn('userProfile es null o undefined');
-    }
+    // Verificar el PIN - está guardado directamente en el documento del usuario
+    console.log('🔍 Buscando PIN...');
+    console.log('userProfile completo:', JSON.stringify(userProfile, null, 2));
+    
+    const pin = userProfile?.pin || 'No disponible';
+    
+    console.log('PIN encontrado:', pin);
+    console.log('Tipo de PIN:', typeof pin);
 
     return (
         <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -108,21 +174,45 @@ export default function ProfilePage() {
                     <div className="grid md:grid-cols-2 gap-4">
                         <div className="grid gap-2">
                             <Label htmlFor="name">Nombre Completo</Label>
-                            <Input id="name" defaultValue={displayName} />
+                            <Input id="name" value={displayName} readOnly />
                         </div>
                         <div className="grid gap-2">
                             <Label htmlFor="email">Correo Electrónico</Label>
-                            <Input id="email" type="email" defaultValue={email} disabled />
+                            <Input id="email" type="email" value={email} disabled />
                         </div>
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="pin">PIN de Usuario</Label>
-                        <Input id="pin" defaultValue={pin} disabled className="font-mono text-lg" />
+                        <div className="flex gap-2">
+                            <Input id="pin" value={pin} disabled className="font-mono text-lg flex-1" />
+                            <Button 
+                                variant="outline" 
+                                size="icon"
+                                onClick={copyPinToClipboard}
+                                disabled={pin === 'No disponible'}
+                                title="Copiar PIN"
+                            >
+                                {isCopied ? (
+                                    <Check className="h-4 w-4 text-green-600" />
+                                ) : (
+                                    <Copy className="h-4 w-4" />
+                                )}
+                            </Button>
+                            <Button 
+                                variant="outline" 
+                                size="icon"
+                                onClick={regeneratePin}
+                                disabled={isRegeneratingPin}
+                                title="Regenerar PIN"
+                            >
+                                <RefreshCw className={`h-4 w-4 ${isRegeneratingPin ? 'animate-spin' : ''}`} />
+                            </Button>
+                        </div>
                         <p className="text-sm text-muted-foreground">Este es tu PIN único para conectar con otros usuarios</p>
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="bio">Biografía</Label>
-                        <Input id="bio" placeholder="Cuéntanos un poco sobre ti" defaultValue={bio} />
+                        <Input id="bio" placeholder="Cuéntanos un poco sobre ti" value={bio} readOnly />
                     </div>
                 </CardContent>
                 <CardFooter>

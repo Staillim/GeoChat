@@ -11,6 +11,7 @@ import { useMessages } from '@/firebase/firestore/use-messages';
 import { useUser } from '@/firebase/auth/use-user';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useSendMessage } from '@/firebase/firestore/use-send-message';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState } from 'react';
@@ -22,6 +23,7 @@ export default function ChatPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const [messageText, setMessageText] = useState('');
+  const { sendMessage, loading: isSending } = useSendMessage();
 
   // Obtener la conversación
   const conversationRef = useMemoFirebase(() => {
@@ -33,6 +35,27 @@ export default function ChatPage() {
   
   // Obtener los mensajes
   const { messages, isLoading: isMessagesLoading } = useMessages(conversationId);
+
+  // Obtener el ID del otro participante
+  const otherParticipantId = conversation?.participants?.find((p: string) => p !== user?.uid);
+
+  // Obtener los datos del otro participante
+  const otherParticipantRef = useMemoFirebase(() => {
+    if (!firestore || !otherParticipantId) return null;
+    return doc(firestore, 'users', otherParticipantId);
+  }, [firestore, otherParticipantId]);
+
+  const { data: otherParticipant } = useDoc(otherParticipantRef);
+
+  const otherUserDisplayName = otherParticipant?.displayName || otherParticipant?.email?.split('@')[0] || 'Usuario';
+  const otherUserPhotoURL = otherParticipant?.photoURL || null;
+  const otherUserInitials = otherUserDisplayName.charAt(0).toUpperCase();
+
+  // Estados de la conversación
+  const isPending = conversation?.status === 'pending';
+  const isActive = conversation?.status === 'active';
+  const isCreator = conversation?.createdBy === user?.uid;
+  const canSendMessages = isActive;
 
   if (!conversationId) {
     return (
@@ -71,18 +94,14 @@ export default function ChatPage() {
     );
   }
 
-  // Obtener el ID del otro participante
-  const otherParticipantId = conversation.participants?.find((p: string) => p !== user?.uid);
-
-  const handleSendMessage = () => {
-    if (!messageText.trim()) return;
+  const handleSendMessage = async () => {
+    if (!messageText.trim() || !canSendMessages || !user || !conversationId) return;
     
-    // TODO: Implementar envío de mensajes a Firestore
-    console.log('Enviar mensaje:', messageText);
-    console.log('A conversación:', conversationId);
-    console.log('De usuario:', user?.uid);
+    const success = await sendMessage(conversationId, user.uid, messageText);
     
-    setMessageText('');
+    if (success) {
+      setMessageText('');
+    }
   };
 
   return (
@@ -94,10 +113,31 @@ export default function ChatPage() {
             </Button>
         </Link>
         <Avatar>
-          <AvatarFallback>{otherParticipantId?.charAt(0).toUpperCase() || '?'}</AvatarFallback>
+          <AvatarImage src={otherUserPhotoURL || ''} alt={otherUserDisplayName} />
+          <AvatarFallback>{otherUserInitials}</AvatarFallback>
         </Avatar>
-        <h2 className="font-semibold text-lg">{otherParticipantId || 'Usuario'}</h2>
+        <div className="flex-1">
+          <h2 className="font-semibold text-lg">{otherUserDisplayName}</h2>
+          {isPending && (
+            <p className="text-xs text-muted-foreground">
+              {isCreator ? 'Solicitud enviada' : 'Solicitud pendiente'}
+            </p>
+          )}
+        </div>
       </header>
+
+      {/* Mensaje de estado pendiente */}
+      {isPending && (
+        <div className="bg-amber-50 dark:bg-amber-950/20 border-b border-amber-200 dark:border-amber-800 p-4">
+          <p className="text-sm text-amber-800 dark:text-amber-200 text-center">
+            {isCreator 
+              ? '⏳ Esperando que el usuario acepte tu solicitud de chat...'
+              : '📩 Este usuario quiere chatear contigo. Acepta la solicitud arriba para comenzar.'
+            }
+          </p>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto">
         <ScrollArea className="h-full">
             <div className="p-4 space-y-4">
@@ -150,17 +190,18 @@ export default function ChatPage() {
       <footer className="flex-shrink-0 border-t p-4 bg-card">
         <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="relative">
           <Input 
-            placeholder="Escribe un mensaje..." 
+            placeholder={canSendMessages ? "Escribe un mensaje..." : "Acepta la solicitud para enviar mensajes"}
             className="pr-12" 
             value={messageText}
             onChange={(e) => setMessageText(e.target.value)}
+            disabled={!canSendMessages || isSending}
           />
           <Button 
             type="submit" 
             size="icon" 
             className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" 
             style={{backgroundColor: 'hsl(var(--accent))'}}
-            disabled={!messageText.trim()}
+            disabled={!messageText.trim() || !canSendMessages || isSending}
           >
             <Send className="h-4 w-4" />
             <span className="sr-only">Enviar</span>

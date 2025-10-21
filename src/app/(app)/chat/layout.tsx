@@ -9,6 +9,76 @@ import { useConversations } from '@/firebase/firestore/use-conversations';
 import { useUser } from '@/firebase/auth/use-user';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SearchUserFab } from '@/components/search-user-fab';
+import { PendingRequestsSection } from '@/components/pending-requests-section';
+import { useDoc } from '@/firebase/firestore/use-doc';
+import { doc } from 'firebase/firestore';
+import { initializeFirebase } from '@/firebase';
+import { useMemo } from 'react';
+
+const { firestore } = initializeFirebase();
+
+interface ConversationItemProps {
+    conv: any;
+    isActive: boolean;
+    currentUserId: string;
+}
+
+function ConversationItem({ conv, isActive, currentUserId }: ConversationItemProps) {
+    const participantId = conv.participants.find((p: string) => p !== currentUserId);
+    
+    const participantDocRef = useMemo(() => {
+        if (!participantId) return null;
+        return doc(firestore, 'users', participantId);
+    }, [participantId]);
+
+    const { data: participantData } = useDoc(participantDocRef);
+
+    const displayName = participantData?.displayName || participantData?.email?.split('@')[0] || 'Usuario';
+    const photoURL = participantData?.photoURL || null;
+    const initials = displayName.charAt(0).toUpperCase();
+
+    // Estados de la conversación
+    const isPending = conv.status === 'pending';
+    const isCreator = conv.createdBy === currentUserId;
+
+    return (
+        <Link
+            key={conv.id}
+            href={`/chat/${conv.id}`}
+            className={cn(
+                "flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent",
+                isActive && "bg-accent",
+                isPending && "border-amber-300 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20"
+            )}
+        >
+            <div className="flex w-full items-center gap-3">
+                <Avatar>
+                    <AvatarImage src={photoURL || ''} alt={displayName} />
+                    <AvatarFallback>{initials}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                    <div className="font-semibold flex items-center gap-2">
+                        <span className="truncate">{displayName}</span>
+                        {isPending && (
+                            <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
+                                {isCreator ? 'Pendiente' : 'Nueva'}
+                            </Badge>
+                        )}
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">
+                        {isPending 
+                            ? (isCreator ? 'Esperando aceptación...' : '¡Nueva solicitud de chat!')
+                            : (conv.lastMessage || 'Sin mensajes')
+                        }
+                    </p>
+                </div>
+                {!isPending && conv.unreadCount && conv.unreadCount[currentUserId] > 0 && (
+                    <Badge>{conv.unreadCount[currentUserId]}</Badge>
+                )}
+            </div>
+        </Link>
+    );
+}
 
 function ConversationList() {
     const params = useParams();
@@ -50,34 +120,16 @@ function ConversationList() {
             <div className="flex flex-col gap-2 p-4 pt-0">
             {conversations.map((conv) => {
                 const isActive = activeConversationId === conv.id;
-                // TODO: Obtener información del otro participante
-                const participantId = conv.participants.find(p => p !== user?.uid);
                 
                 return (
-                <Link
-                    key={conv.id}
-                    href={`/chat/${conv.id}`}
-                    className={cn(
-                        "flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent",
-                        isActive && "bg-accent"
-                    )}
-                    >
-                    <div className="flex w-full items-center gap-3">
-                        <Avatar>
-                            <AvatarFallback>?</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                            <div className="font-semibold">{participantId}</div>
-                            <p className="text-xs text-muted-foreground truncate">
-                                {conv.lastMessage || 'Sin mensajes'}
-                            </p>
-                        </div>
-                        {conv.unreadCount && conv.unreadCount[user?.uid || ''] > 0 && (
-                            <Badge>{conv.unreadCount[user?.uid || '']}</Badge>
-                        )}
-                    </div>
-                </Link>
-            )})}
+                    <ConversationItem 
+                        key={conv.id}
+                        conv={conv}
+                        isActive={isActive}
+                        currentUserId={user?.uid || ''}
+                    />
+                );
+            })}
             </div>
       </ScrollArea>
     )
@@ -99,6 +151,8 @@ export default function ChatLayout({
             <div className="flex h-14 items-center border-b px-4 lg:h-[60px] lg:px-6">
                 <h2 className="font-semibold text-lg">Conversaciones</h2>
             </div>
+            {/* Sección de solicitudes pendientes */}
+            <PendingRequestsSection />
             <ConversationList/>
         </div>
       </div>
