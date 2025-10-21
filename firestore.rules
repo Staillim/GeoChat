@@ -1,0 +1,183 @@
+/**
+ * @fileOverview Firestore Security Rules for LocalConnect.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user-specific data and a shared-access model for chat rooms.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user account information, accessible only by the user.
+ * - /users/{userId}/profile: Stores user profile information, accessible only by the user.
+ * - /users/{userId}/pointsOfInterest/{pointOfInterestId}: Stores points of interest associated with a user profile, accessible only by the user.
+ * - /chatRooms/{chatRoomId}: Stores chat room information. Access is controlled by the `participantIds` array.
+ * - /chatRooms/{chatRoomId}/messages/{messageId}: Stores chat messages within a chat room. Access is controlled by the parent chat room's `participantIds`.
+ *
+ * Key Security Decisions:
+ * - User listing is disallowed.
+ * - All write operations require authentication.
+ * - Data validation is relaxed in this prototyping phase to allow for rapid iteration, focusing on ownership and relational integrity.
+ *
+ * Denormalization for Authorization:
+ * - Chat messages denormalize the `senderId` to allow for independent authorization without requiring `get()` calls.
+ * - Chat rooms store a `participantIds` array to directly manage access control.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user account documents.
+     * @path /users/{userId}
+     * @allow (create) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can create their account if request.auth.uid == userId.
+     * @allow (get) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can read their account.
+     * @allow (update) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can update their account.
+     * @allow (delete) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can delete their account.
+     * @deny (create) User 'attackerId' cannot create an account with userId 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{userId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId));
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}/profile
+     * @allow (create) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can create their profile.
+     * @allow (get) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can read their profile.
+     * @allow (update) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can update their profile.
+     * @allow (delete) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can delete their profile.
+     * @deny (create) User 'attackerId' cannot create a profile for userId 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1'.
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /users/{userId}/profile {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId)/profile);
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to points of interest associated with a user profile.
+     * @path /users/{userId}/pointsOfInterest/{pointOfInterestId}
+     * @allow (create) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can create a point of interest.
+     * @allow (get) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can read their points of interest.
+     * @allow (update) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can update their points of interest.
+     * @allow (delete) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can delete their points of interest.
+     * @deny (create) User 'attackerId' cannot create a point of interest for userId 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1'.
+     * @principle Restricts access to a user's own data.
+     */
+    match /users/{userId}/pointsOfInterest/{pointOfInterestId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId)/pointsOfInterest/$(pointOfInterestId));
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to chat room documents.
+     * @path /chatRooms/{chatRoomId}
+     * @allow (create) Any signed-in user can create a chat room. Ensure participant list includes the creator.
+     * @allow (get) Any participant can read the chat room.
+     * @allow (update) Only participants can update. Updating `participantIds` requires special permission (TODO).
+     * @allow (delete) Only participants can delete.
+     * @deny (create) Anonymous user can not create a chat room.
+     * @deny (create) User 'attackerId' cannot create a chat room without including themself in participantIds.
+     * @principle Enforces shared access between collaborators.
+     */
+    match /chatRooms/{chatRoomId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isParticipant(chatRoomId) {
+        return isSignedIn() && request.auth.uid in resource.data.participantIds;
+      }
+
+        // Checks if the requesting user is in the chatRoom's participant list.
+      function isParticipantList(chatRoomId) {
+        return isSignedIn() && request.auth.uid in request.resource.data.participantIds;
+      }
+
+      function isExistingParticipant(chatRoomId) {
+        return isSignedIn() && request.auth.uid in resource.data.participantIds;
+      }
+      
+      allow get: if isParticipant(chatRoomId);
+      allow list: if true; //Public listing of chatrooms, should be limited if sensitive information is involved
+      allow create: if isSignedIn() && (request.resource.data.participantIds.size() > 0) && (request.auth.uid in request.resource.data.participantIds) ;
+      allow update: if isExistingParticipant(chatRoomId);
+      allow delete: if isExistingParticipant(chatRoomId);
+    }
+
+    /**
+     * @description Controls access to chat messages within a chat room.
+     * @path /chatRooms/{chatRoomId}/messages/{messageId}
+     * @allow (create) Any participant can create a message.
+     * @allow (get) Any participant can read a message.
+     * @allow (update) No one can update a message.
+     * @allow (delete) No one can delete a message.
+     * @deny (create) User 'attackerId' cannot create a message in a chat room they don't belong to.
+     * @principle Enforces shared access between collaborators.
+     */
+    match /chatRooms/{chatRoomId}/messages/{messageId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isParticipant(chatRoomId) {
+          return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(chatRoomId)).data.participantIds;
+      }
+
+      function isExistingParticipant(chatRoomId) {
+        return isParticipant(chatRoomId);
+      }
+
+      allow get: if isParticipant(chatRoomId);
+      allow list: if isParticipant(chatRoomId);
+      allow create: if isParticipant(chatRoomId) && request.resource.data.senderId == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
+    }
+  }
+}
