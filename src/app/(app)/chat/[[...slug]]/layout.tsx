@@ -104,9 +104,9 @@ export default function ChatIndividualLayout({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      {/* HEADER FIJO - Completamente fuera del scroll */}
-      <header className="flex-shrink-0 flex items-center gap-4 border-b bg-gradient-to-r from-card/80 to-card/60 backdrop-blur-md px-4 h-14 lg:h-[60px] relative overflow-hidden group">
+    <div className="relative h-full w-full">
+      {/* HEADER FIJO - Position fixed en la parte superior */}
+      <header className="fixed top-0 left-0 right-0 z-50 flex items-center gap-4 border-b bg-gradient-to-r from-card/95 to-card/90 backdrop-blur-md px-4 h-14 lg:h-[60px] overflow-hidden group">
         {/* Orbe decorativo de fondo */}
         <div className="absolute -top-8 -right-8 w-24 h-24 bg-primary/10 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
         
@@ -135,9 +135,9 @@ export default function ChatIndividualLayout({
         </div>
       </header>
 
-      {/* Mensaje de estado pendiente */}
+      {/* Mensaje de estado pendiente - También fixed justo debajo del header */}
       {isPending && (
-        <div className="flex-shrink-0 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-b border-amber-200 dark:border-amber-800 p-4 relative overflow-hidden">
+        <div className="fixed top-14 lg:top-[60px] left-0 right-0 z-40 bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-b border-amber-200 dark:border-amber-800 p-4 overflow-hidden">
           {/* Orbe animado */}
           <div className="absolute -left-4 top-0 w-16 h-16 bg-amber-400/20 rounded-full blur-2xl animate-pulse" />
           <p className="text-sm text-amber-900 dark:text-amber-200 text-center font-medium relative z-10 flex items-center justify-center gap-2">
@@ -150,13 +150,21 @@ export default function ChatIndividualLayout({
         </div>
       )}
 
-      {/* ÁREA DE MENSAJES CON SCROLL - Esta es la única parte con scroll */}
-      <div className="flex-1 overflow-y-auto overflow-x-hidden">
+      {/* ÁREA DE MENSAJES CON SCROLL - Ocupa el espacio entre header y footer */}
+      <div 
+        className={cn(
+          "absolute left-0 right-0 overflow-y-auto overflow-x-hidden hide-scrollbar",
+          // Top: header height + banner pendiente (si existe)
+          isPending ? "top-[calc(3.5rem+4.5rem)] lg:top-[calc(3.75rem+4.5rem)]" : "top-14 lg:top-[3.75rem]",
+          // Bottom: footer height
+          "bottom-[5.5rem]"
+        )}
+      >
         {children}
       </div>
 
-      {/* FOOTER FIJO - Completamente fuera del scroll */}
-      <footer className="flex-shrink-0 border-t p-4 bg-card/80 backdrop-blur-md">
+      {/* FOOTER FIJO - Position fixed en la parte inferior */}
+      <footer className="fixed bottom-0 left-0 right-0 z-50 border-t p-4 bg-card/95 backdrop-blur-md">
         <form onSubmit={(e) => { e.preventDefault(); handleSendMessage(); }} className="relative group">
           <Input 
             placeholder={canSendMessages ? "Escribe un mensaje..." : "Acepta la solicitud para enviar mensajes"}

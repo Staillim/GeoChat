@@ -291,3 +291,19 @@ html, body {
   background-size: 200% 200%;
   animation: gradient-shift 4s ease infinite;
 }
+
+/* Ocultar scrollbar pero mantener funcionalidad */
+/* Para Chrome, Safari y Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Para Firefox */
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Para IE y Edge */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+}
