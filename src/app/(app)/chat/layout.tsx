@@ -160,8 +160,8 @@ export default function ChatLayout({
         {children}
       </div>
       
-      {/* Floating Action Button for searching users */}
-      <SearchUserFab />
+      {/* Floating Action Button for searching users - only show when not in a chat */}
+      {(!slug || slug.length === 0) && <SearchUserFab />}
     </div>
   )
 }
