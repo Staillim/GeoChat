@@ -43,51 +43,75 @@ function ConversationItem({ conv, isActive, currentUserId }: ConversationItemPro
     const unreadCount = conv.unreadCount?.[currentUserId] || 0;
     const hasUnread = unreadCount > 0;
 
+    // Gradientes aleatorios para cada conversación
+    const gradients = [
+        'from-cyan-500/10 to-purple-500/10',
+        'from-pink-500/10 to-orange-500/10',
+        'from-green-500/10 to-blue-500/10',
+        'from-amber-500/10 to-red-500/10',
+        'from-violet-500/10 to-fuchsia-500/10',
+    ];
+    const gradientIndex = Math.abs(conv.id.charCodeAt(0)) % gradients.length;
+    const gradient = gradients[gradientIndex];
+
     return (
         <Link
             key={conv.id}
             href={`/chat/${conv.id}`}
             className={cn(
-                "flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent relative group",
+                "flex flex-col items-start gap-2 rounded-xl border p-3 text-left text-sm relative group overflow-hidden",
+                "shimmer-effect hover-lift card-hover-effect",
+                "bg-gradient-to-br transition-all duration-500",
+                gradient,
                 "animate-in fade-in slide-in-from-left-2 duration-300",
-                isActive && "bg-accent",
-                isPending && "border-amber-300 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20",
-                hasUnread && !isActive && "border-primary/50 bg-primary/5"
+                isActive && "bg-accent ring-2 ring-primary/50 shadow-lg shadow-primary/20",
+                isPending && "border-amber-300 bg-gradient-to-br from-amber-50/80 to-orange-50/80 dark:border-amber-800 dark:from-amber-950/40 dark:to-orange-950/40",
+                hasUnread && !isActive && "border-primary/50 ring-2 ring-primary/30 bg-gradient-to-br from-primary/10 to-accent/10"
             )}
         >
+            {/* 🌟 Orbes flotantes de fondo */}
+            <div className="absolute -top-4 -left-4 w-20 h-20 bg-primary/20 rounded-full blur-2xl opacity-0 group-hover:opacity-60 transition-opacity duration-500 floating-orb" />
+            <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-accent/20 rounded-full blur-2xl opacity-0 group-hover:opacity-60 transition-opacity duration-500 floating-orb" style={{ animationDelay: '1s' }} />
+            
             {/* Indicador de mensajes no leídos */}
             {hasUnread && !isActive && (
-                <div className="absolute top-2 right-2 animate-in zoom-in duration-200">
+                <div className="absolute top-2 right-2 animate-in zoom-in duration-200 z-10">
                     <div className="relative">
-                        <Badge variant="destructive" className="h-5 min-w-[20px] px-1 flex items-center justify-center text-xs animate-pulse">
+                        <Badge variant="destructive" className="h-5 min-w-[20px] px-1.5 flex items-center justify-center text-xs font-bold animate-pulse shadow-lg shadow-red-500/50">
                             {unreadCount > 99 ? '99+' : unreadCount}
                         </Badge>
                     </div>
                 </div>
             )}
-            <div className="flex w-full items-center gap-3">
+            
+            <div className="flex w-full items-center gap-3 relative z-10">
                 <div className="relative">
-                    <Avatar className="transition-transform group-hover:scale-110">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/30 to-accent/30 rounded-full blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    <Avatar className="transition-all duration-300 group-hover:scale-110 group-hover:rotate-3 relative z-10 ring-2 ring-background shadow-md">
                         <AvatarImage src={photoURL || ''} alt={displayName} />
-                        <AvatarFallback>{initials}</AvatarFallback>
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-accent text-white font-bold">{initials}</AvatarFallback>
                     </Avatar>
-                    {/* Indicador de punto rojo con animación */}
+                    {/* Indicador de punto rojo con animación mejorada */}
                     {hasUnread && !isActive && (
-                        <div className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-500 rounded-full border-2 border-background animate-pulse" />
+                        <div className="absolute -top-0.5 -right-0.5 z-20">
+                            <div className="relative h-3 w-3 bg-red-500 rounded-full border-2 border-background animate-pulse">
+                                <div className="absolute inset-0 bg-red-500 rounded-full animate-ping" />
+                            </div>
+                        </div>
                     )}
                 </div>
                 <div className="flex-1 min-w-0">
                     <div className="font-semibold flex items-center gap-2">
-                        <span className="truncate">{displayName}</span>
+                        <span className="truncate group-hover:text-primary transition-colors duration-300">{displayName}</span>
                         {isPending && (
-                            <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950 dark:text-amber-200 dark:border-amber-800">
+                            <Badge variant="outline" className="text-xs bg-gradient-to-r from-amber-100 to-orange-100 text-amber-900 border-amber-300 dark:from-amber-950 dark:to-orange-950 dark:text-amber-200 dark:border-amber-800 shadow-sm">
                                 {isCreator ? 'Pendiente' : 'Nueva'}
                             </Badge>
                         )}
                     </div>
                     <p className={cn(
-                        "text-xs truncate",
-                        hasUnread && !isActive ? "text-foreground font-semibold" : "text-muted-foreground"
+                        "text-xs truncate transition-all duration-300",
+                        hasUnread && !isActive ? "text-foreground font-semibold" : "text-muted-foreground group-hover:text-foreground"
                     )}>
                         {isPending 
                             ? (isCreator ? 'Esperando aceptación...' : '¡Nueva solicitud de chat!')
