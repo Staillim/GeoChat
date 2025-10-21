@@ -226,6 +226,10 @@ service cloud.firestore {
         return isCreator() && resource.data.status == 'active';
       }
 
+      function isUpdatingUnreadCount() {
+        return isParticipant() && resource.data.status == 'active';
+      }
+
       // Any participant can read the conversation
       allow get: if isParticipant();
       
@@ -239,9 +243,9 @@ service cloud.firestore {
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.participants.size() == 2;
       
-      // Update: creator can update if active, or recipient can accept pending
+      // Update: creator can update if active, recipient can accept pending, or any participant can update unread counts
       allow update: if isParticipant() 
-                    && (isUpdatingActiveConversation() || isAcceptingRequest());
+                    && (isUpdatingActiveConversation() || isAcceptingRequest() || isUpdatingUnreadCount());
       
       // Delete: any participant can delete
       allow delete: if isParticipant();

@@ -12,9 +12,10 @@ import { useUser } from '@/firebase/auth/use-user';
 import { useDoc } from '@/firebase/firestore/use-doc';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useSendMessage } from '@/firebase/firestore/use-send-message';
+import { useMarkAsRead } from '@/firebase/firestore/use-mark-as-read';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function ChatPage() {
   const params = useParams();
@@ -24,6 +25,9 @@ export default function ChatPage() {
   const firestore = useFirestore();
   const [messageText, setMessageText] = useState('');
   const { sendMessage, loading: isSending } = useSendMessage();
+  const { markAsRead } = useMarkAsRead();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Obtener la conversación
   const conversationRef = useMemoFirebase(() => {
@@ -35,6 +39,23 @@ export default function ChatPage() {
   
   // Obtener los mensajes
   const { messages, isLoading: isMessagesLoading } = useMessages(conversationId);
+
+  // Auto-scroll cuando lleguen mensajes nuevos
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Marcar mensajes como leídos cuando se abre el chat
+  useEffect(() => {
+    if (conversationId && user?.uid && conversation) {
+      const unreadCount = conversation.unreadCount?.[user.uid] || 0;
+      if (unreadCount > 0) {
+        markAsRead(conversationId, user.uid);
+      }
+    }
+  }, [conversationId, user?.uid, conversation, markAsRead]);
 
   // Obtener el ID del otro participante
   const otherParticipantId = conversation?.participants?.find((p: string) => p !== user?.uid);
@@ -139,7 +160,7 @@ export default function ChatPage() {
       )}
 
       <div className="flex-1 overflow-y-auto">
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full" ref={scrollAreaRef}>
             <div className="p-4 space-y-4">
             {isMessagesLoading ? (
               <div className="text-center text-muted-foreground">
@@ -151,39 +172,44 @@ export default function ChatPage() {
                 <p className="text-sm mt-2">Sé el primero en enviar un mensaje</p>
               </div>
             ) : (
-              messages.map((message) => {
-                const isSender = message.senderId === user?.uid;
-                const senderName = isSender ? 'Tú' : (message.senderName || 'Usuario');
+              <>
+                {messages.map((message) => {
+                  const isSender = message.senderId === user?.uid;
+                  const senderName = isSender ? 'Tú' : (message.senderName || 'Usuario');
 
-                return (
-                <div key={message.id} className={cn('flex items-end gap-2', isSender ? 'justify-end' : 'justify-start')}>
-                    {!isSender && (
-                    <Avatar className="h-8 w-8">
-                        <AvatarFallback>{senderName.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    )}
-                    <div
-                    className={cn(
-                        'max-w-xs rounded-lg p-3 text-sm md:max-w-md',
-                        isSender
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-card'
-                    )}
-                    >
-                    <p>{message.text}</p>
-                    <p className={cn("text-xs mt-1", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
-                      {message.timestamp?.toDate?.()?.toLocaleTimeString() || 'Ahora'}
-                    </p>
-                    </div>
-                    {isSender && (
-                    <Avatar className="h-8 w-8">
-                        <AvatarImage src={user?.photoURL || ''} />
-                        <AvatarFallback>{senderName.charAt(0).toUpperCase()}</AvatarFallback>
-                    </Avatar>
-                    )}
-                </div>
-                );
-            }))}
+                  return (
+                  <div key={message.id} className={cn('flex items-end gap-2', isSender ? 'justify-end' : 'justify-start')}>
+                      {!isSender && (
+                      <Avatar className="h-8 w-8">
+                          <AvatarFallback>{senderName.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      )}
+                      <div
+                      className={cn(
+                          'max-w-xs rounded-lg p-3 text-sm md:max-w-md',
+                          isSender
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-card'
+                      )}
+                      >
+                      <p>{message.text}</p>
+                      <p className={cn("text-xs mt-1", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+                        {message.timestamp?.toDate?.()?.toLocaleTimeString() || 'Ahora'}
+                      </p>
+                      </div>
+                      {isSender && (
+                      <Avatar className="h-8 w-8">
+                          <AvatarImage src={user?.photoURL || ''} />
+                          <AvatarFallback>{senderName.charAt(0).toUpperCase()}</AvatarFallback>
+                      </Avatar>
+                      )}
+                  </div>
+                  );
+                })}
+                {/* Elemento invisible para auto-scroll */}
+                <div ref={messagesEndRef} />
+              </>
+            )}
             </div>
         </ScrollArea>
       </div>

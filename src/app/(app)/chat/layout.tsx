@@ -40,22 +40,40 @@ function ConversationItem({ conv, isActive, currentUserId }: ConversationItemPro
     // Estados de la conversación
     const isPending = conv.status === 'pending';
     const isCreator = conv.createdBy === currentUserId;
+    const unreadCount = conv.unreadCount?.[currentUserId] || 0;
+    const hasUnread = unreadCount > 0;
 
     return (
         <Link
             key={conv.id}
             href={`/chat/${conv.id}`}
             className={cn(
-                "flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent",
+                "flex flex-col items-start gap-2 rounded-lg border p-3 text-left text-sm transition-all hover:bg-accent relative",
                 isActive && "bg-accent",
                 isPending && "border-amber-300 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20"
             )}
         >
+            {/* Indicador de mensajes no leídos */}
+            {hasUnread && !isActive && (
+                <div className="absolute top-2 right-2">
+                    <div className="relative">
+                        <Badge variant="destructive" className="h-5 min-w-[20px] px-1 flex items-center justify-center text-xs">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                        </Badge>
+                    </div>
+                </div>
+            )}
             <div className="flex w-full items-center gap-3">
-                <Avatar>
-                    <AvatarImage src={photoURL || ''} alt={displayName} />
-                    <AvatarFallback>{initials}</AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                    <Avatar>
+                        <AvatarImage src={photoURL || ''} alt={displayName} />
+                        <AvatarFallback>{initials}</AvatarFallback>
+                    </Avatar>
+                    {/* Indicador de punto rojo */}
+                    {hasUnread && !isActive && (
+                        <div className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-500 rounded-full border-2 border-background" />
+                    )}
+                </div>
                 <div className="flex-1 min-w-0">
                     <div className="font-semibold flex items-center gap-2">
                         <span className="truncate">{displayName}</span>
@@ -65,15 +83,20 @@ function ConversationItem({ conv, isActive, currentUserId }: ConversationItemPro
                             </Badge>
                         )}
                     </div>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className={cn(
+                        "text-xs truncate",
+                        hasUnread && !isActive ? "text-foreground font-semibold" : "text-muted-foreground"
+                    )}>
                         {isPending 
                             ? (isCreator ? 'Esperando aceptación...' : '¡Nueva solicitud de chat!')
                             : (conv.lastMessage || 'Sin mensajes')
                         }
                     </p>
                 </div>
-                {!isPending && conv.unreadCount && conv.unreadCount[currentUserId] > 0 && (
-                    <Badge>{conv.unreadCount[currentUserId]}</Badge>
+                {!isPending && hasUnread && !isActive && (
+                    <div className="flex-shrink-0">
+                        {/* Badge ya está en la esquina superior derecha */}
+                    </div>
                 )}
             </div>
         </Link>
