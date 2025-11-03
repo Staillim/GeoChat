@@ -1,0 +1,275 @@
+{
+  "entities": {
+    "UserAccount": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserAccount",
+      "type": "object",
+      "description": "Stores user account information, excluding sensitive authentication data.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user account."
+        },
+        "username": {
+          "type": "string",
+          "description": "The username chosen by the user.",
+          "format": "string"
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "profileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserAccount 1:1 UserProfile)"
+        }
+      },
+      "required": [
+        "id",
+        "username",
+        "email",
+        "profileId"
+      ]
+    },
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Stores user profile information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user profile."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "The user's display name."
+        },
+        "bio": {
+          "type": "string",
+          "description": "A short biography of the user."
+        },
+        "location": {
+          "type": "string",
+          "description": "The user's general location."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "The latitude coordinate of the user's location."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "The longitude coordinate of the user's location."
+        }
+      },
+      "required": [
+        "id",
+        "displayName"
+      ]
+    },
+    "ChatMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatMessage",
+      "type": "object",
+      "description": "Represents a single chat message.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the chat message."
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Reference to UserAccount. (Relationship: UserAccount 1:N ChatMessage) The ID of the user who sent the message."
+        },
+        "content": {
+          "type": "string",
+          "description": "The text content of the message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The date and time when the message was sent.",
+          "format": "date-time"
+        },
+        "chatRoomId": {
+          "type": "string",
+          "description": "Reference to ChatRoom. (Relationship: ChatRoom 1:N ChatMessage). The chat room to which this message belongs"
+        }
+      },
+      "required": [
+        "id",
+        "senderId",
+        "content",
+        "timestamp",
+        "chatRoomId"
+      ]
+    },
+    "ChatRoom": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatRoom",
+      "type": "object",
+      "description": "Represents a chat room between two or more users.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the chat room."
+        },
+        "participantIds": {
+          "type": "array",
+          "description": "References to UserAccounts. (Relationship: ChatRoom N:N UserAccount) The IDs of the users participating in the chat room.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lastMessageTimestamp": {
+          "type": "string",
+          "description": "The timestamp of the most recent message in the chat room.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "participantIds"
+      ]
+    },
+    "PointOfInterest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PointOfInterest",
+      "type": "object",
+      "description": "Represents a point of interest near a user.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the point of interest."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the point of interest."
+        },
+        "latitude": {
+          "type": "number",
+          "description": "The latitude coordinate of the point of interest."
+        },
+        "longitude": {
+          "type": "number",
+          "description": "The longitude coordinate of the point of interest."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of point of interest (e.g., restaurant, park, museum)."
+        },
+        "userProfileId": {
+          "type": "string",
+          "description": "Reference to UserProfile. (Relationship: UserProfile 1:N PointOfInterest) The user profile that requested the generation."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "latitude",
+        "longitude",
+        "type",
+        "userProfileId"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserAccount",
+          "schema": {
+            "$ref": "#/backend/entities/UserAccount"
+          },
+          "description": "Stores user account information. The 'userId' parameter is the unique identifier for the user. ",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user account."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/profile",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores user profile information. This is a subcollection under the user document, ensuring only the user can access their profile data. ",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user account."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/pointsOfInterest/{pointOfInterestId}",
+        "definition": {
+          "entityName": "PointOfInterest",
+          "schema": {
+            "$ref": "#/backend/entities/PointOfInterest"
+          },
+          "description": "Stores points of interest associated with a user profile. This is a subcollection under the user profile, ensuring only the user can access their points of interest. The 'pointOfInterestId' is the unique identifier for each point of interest.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier for the user account."
+            },
+            {
+              "name": "pointOfInterestId",
+              "description": "The unique identifier for the point of interest."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/chatRooms/{chatRoomId}",
+        "definition": {
+          "entityName": "ChatRoom",
+          "schema": {
+            "$ref": "#/backend/entities/ChatRoom"
+          },
+          "description": "Stores chat room information. The 'chatRoomId' parameter is the unique identifier for the chat room. Includes 'participantIds' for authorization. Each ChatRoom document's participantIds array stores references to the UserAccount documents, facilitating querying and management of chat room participants.",
+          "params": [
+            {
+              "name": "chatRoomId",
+              "description": "The unique identifier for the chat room."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/chatRooms/{chatRoomId}/messages/{messageId}",
+        "definition": {
+          "entityName": "ChatMessage",
+          "schema": {
+            "$ref": "#/backend/entities/ChatMessage"
+          },
+          "description": "Stores chat messages within a chat room. The 'chatRoomId' parameter identifies the chat room, and 'messageId' is the unique identifier for the message.  Includes denormalized 'senderId' for authorization independence.",
+          "params": [
+            {
+              "name": "chatRoomId",
+              "description": "The unique identifier for the chat room."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique identifier for the chat message."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support user authentication, profile management, real-time messaging, and geolocated user discovery. It prioritizes authorization independence and QAPs by denormalizing necessary data and segregating data based on access requirements. The structure also adheres to the principle of data clarity through explicit state modeling and semantic naming conventions.\n\n*   **Authorization Independence:** The structure avoids `get()` calls in security rules by denormalizing authorization data. For example, chat room member information is stored directly within each chat message.\n*   **QAPs:** Secure `list` operations are supported through structural segregation. User profiles and associated points of interest are stored under the `/users/{userId}` path, ensuring that only the user can access their data, or users with the appropriate role.\n\nThe structure is designed to scale efficiently and provide a robust and secure foundation for the LocalConnect application."
+  }
+}

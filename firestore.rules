@@ -1,0 +1,425 @@
+/**
+ * @fileOverview Firestore Security Rules for GeoChat.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user-specific data and a shared-access model for conversations.
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user account information. Readable by all authenticated users (for search/map).
+ * - /users/{userId}/profile: Stores user profile information, accessible only by the user.
+ * - /users/{userId}/pointsOfInterest/{pointOfInterestId}: Stores points of interest associated with a user profile.
+ * - /conversations/{conversationId}: Stores conversation information with status (pending/active/blocked).
+ * - /conversations/{conversationId}/messages/{messageId}: Stores messages within conversations.
+ * - /chatRequests/{requestId}: Stores chat/friend requests with approval workflow.
+ * - /chatRooms/{chatRoomId}: Legacy chat room structure (kept for backward compatibility).
+ *
+ * Key Security Decisions:
+ * - Users can read all user profiles (for PIN search and map display).
+ * - Conversations have status control (pending until accepted).
+ * - Messages can only be sent in active conversations.
+ * - Chat requests implement a two-step approval process.
+ *
+ * Denormalization for Authorization:
+ * - Messages store `senderId` for independent authorization.
+ * - Chat requests store user info to avoid extra reads.
+ * - Conversations store `createdBy` and `status` for access control.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user account documents.
+     * @path /users/{userId}
+     * @allow (create) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can create their account if request.auth.uid == userId.
+     * @allow (get) Any authenticated user can read any user profile (for map display).
+     * @allow (list) Any authenticated user can list users (for map display).
+     * @allow (update) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can update their account.
+     * @allow (update) Any user can send location sharing request by adding their UID to locationSharingRequests array.
+     * @allow (delete) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can delete their account.
+     * @deny (create) User 'attackerId' cannot create an account with userId 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1'.
+     * @principle Enforces document ownership for writes, but allows authenticated users to read for map functionality.
+     */
+    match /users/{userId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId));
+      }
+
+      // Permite que un usuario agregue su UID a la lista de solicitudes de ubicación del otro usuario
+      function isAddingLocationRequest() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['locationSharingRequests'])
+               && (
+                 // Si el campo no existía antes, permitir crear array con solo mi UID
+                 (!('locationSharingRequests' in resource.data) 
+                  && request.resource.data.locationSharingRequests.size() == 1 
+                  && request.resource.data.locationSharingRequests[0] == request.auth.uid)
+                 ||
+                 // Si ya existía, verificar que solo se agregó mi UID
+                 ('locationSharingRequests' in resource.data
+                  && request.resource.data.locationSharingRequests.toSet().difference(resource.data.locationSharingRequests.toSet()).size() == 1
+                  && request.resource.data.locationSharingRequests.toSet().difference(resource.data.locationSharingRequests.toSet()).hasOnly([request.auth.uid]))
+               );
+      }
+
+      allow get: if isSignedIn(); // Allow any authenticated user to read user profiles
+      allow list: if isSignedIn(); // Allow any authenticated user to list users for map
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isExistingOwner(userId) || isAddingLocationRequest(); // Owner or adding location request
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to user profile documents.
+     * @path /users/{userId}/profile
+     * @allow (create) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can create their profile.
+     * @allow (get) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can read their profile.
+     * @allow (update) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can update their profile.
+     * @allow (delete) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can delete their profile.
+     * @deny (create) User 'attackerId' cannot create a profile for userId 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1'.
+     * @principle Restricts access to a user's own data tree.
+     */
+    match /users/{userId}/profile {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId)/profile);
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to points of interest associated with a user profile.
+     * @path /users/{userId}/pointsOfInterest/{pointOfInterestId}
+     * @allow (create) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can create a point of interest.
+     * @allow (get) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can read their points of interest.
+     * @allow (update) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can update their points of interest.
+     * @allow (delete) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can delete their points of interest.
+     * @deny (create) User 'attackerId' cannot create a point of interest for userId 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1'.
+     * @principle Restricts access to a user's own data.
+     */
+    match /users/{userId}/pointsOfInterest/{pointOfInterestId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId)/pointsOfInterest/$(pointOfInterestId));
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to chat room documents.
+     * @path /chatRooms/{chatRoomId}
+     * @allow (create) Any signed-in user can create a chat room. Ensure participant list includes the creator.
+     * @allow (get) Any participant can read the chat room.
+     * @allow (update) Only participants can update. Updating `participantIds` requires special permission (TODO).
+     * @allow (delete) Only participants can delete.
+     * @deny (create) Anonymous user can not create a chat room.
+     * @deny (create) User 'attackerId' cannot create a chat room without including themself in participantIds.
+     * @principle Enforces shared access between collaborators.
+     */
+    match /chatRooms/{chatRoomId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isParticipant(chatRoomId) {
+        return isSignedIn() && request.auth.uid in resource.data.participantIds;
+      }
+
+        // Checks if the requesting user is in the chatRoom's participant list.
+      function isParticipantList(chatRoomId) {
+        return isSignedIn() && request.auth.uid in request.resource.data.participantIds;
+      }
+
+      function isExistingParticipant(chatRoomId) {
+        return isSignedIn() && request.auth.uid in resource.data.participantIds;
+      }
+      
+      allow get: if isParticipant(chatRoomId);
+      allow list: if true; //Public listing of chatrooms, should be limited if sensitive information is involved
+      allow create: if isSignedIn() && (request.resource.data.participantIds.size() > 0) && (request.auth.uid in request.resource.data.participantIds) ;
+      allow update: if isExistingParticipant(chatRoomId);
+      allow delete: if isExistingParticipant(chatRoomId);
+    }
+
+    /**
+     * @description Controls access to chat messages within a chat room.
+     * @path /chatRooms/{chatRoomId}/messages/{messageId}
+     * @allow (create) Any participant can create a message.
+     * @allow (get) Any participant can read a message.
+     * @allow (update) No one can update a message.
+     * @allow (delete) No one can delete a message.
+     * @deny (create) User 'attackerId' cannot create a message in a chat room they don't belong to.
+     * @principle Enforces shared access between collaborators.
+     */
+    match /chatRooms/{chatRoomId}/messages/{messageId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isParticipant(chatRoomId) {
+          return isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/chatRooms/$(chatRoomId)).data.participantIds;
+      }
+
+      function isExistingParticipant(chatRoomId) {
+        return isParticipant(chatRoomId);
+      }
+
+      allow get: if isParticipant(chatRoomId);
+      allow list: if isParticipant(chatRoomId);
+      allow create: if isParticipant(chatRoomId) && request.resource.data.senderId == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to conversation documents (chat structure with status control).
+     * @path /conversations/{conversationId}
+     * @allow (create) Any signed-in user can create a conversation with status 'pending' or 'active'.
+     * @allow (get) Any participant can read the conversation.
+     * @allow (list) Any signed-in user can list conversations they're part of (filtered by query).
+     * @allow (update) Participants can update. Creator can update lastMessage. Recipient can accept (change status).
+     * @allow (delete) Only participants can delete.
+     * @principle Enforces shared access with status-based approval workflow.
+     */
+    match /conversations/{conversationId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isParticipant() {
+        return isSignedIn() && request.auth.uid in resource.data.participants;
+      }
+
+      function isParticipantInNew() {
+        return isSignedIn() && request.auth.uid in request.resource.data.participants;
+      }
+
+      function isCreator() {
+        return isSignedIn() && request.auth.uid == resource.data.createdBy;
+      }
+
+      function isValidStatus() {
+        return request.resource.data.status in ['pending', 'active', 'blocked'];
+      }
+
+      function isAcceptingRequest() {
+        return resource.data.status == 'pending' 
+               && request.resource.data.status == 'active'
+               && !isCreator();
+      }
+
+      function isUpdatingActiveConversation() {
+        return isCreator() && resource.data.status == 'active';
+      }
+
+      function isUpdatingUnreadCount() {
+        return isParticipant() && resource.data.status == 'active';
+      }
+
+      // Any participant can read the conversation
+      allow get: if isParticipant();
+      
+      // Users can list their conversations (query filters by participants array)
+      allow list: if isSignedIn();
+      
+      // Create: must be participant, set valid status, and set createdBy
+      allow create: if isSignedIn() 
+                    && isParticipantInNew() 
+                    && isValidStatus()
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.participants.size() == 2;
+      
+      // Update: creator can update if active, recipient can accept pending, or any participant can update unread counts
+      allow update: if isParticipant() 
+                    && (isUpdatingActiveConversation() || isAcceptingRequest() || isUpdatingUnreadCount());
+      
+      // Delete: any participant can delete
+      allow delete: if isParticipant();
+
+      /**
+       * @description Controls access to messages within a conversation.
+       * @path /conversations/{conversationId}/messages/{messageId}
+       * @allow (create) Participants can create messages only in active conversations.
+       * @allow (get) Any participant can read a message.
+       * @allow (list) Any participant can list messages.
+       * @allow (update) Recipients can mark messages as read (update read status only).
+       * @allow (delete) No one can delete messages (immutable).
+       * @principle Messages content is immutable, but read status can be updated by recipient.
+       */
+      match /messages/{messageId} {
+        function isConversationParticipant() {
+          return isSignedIn() 
+                 && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participants;
+        }
+
+        function isConversationActive() {
+          return get(/databases/$(database)/documents/conversations/$(conversationId)).data.status == 'active';
+        }
+
+        function isMarkingAsRead() {
+          // Only allow updating 'read' and 'readAt' fields
+          // Cannot change text, senderId, or timestamp
+          return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read', 'readAt'])
+                 && request.resource.data.read == true
+                 && resource.data.senderId != request.auth.uid; // Can't mark own messages as read
+        }
+
+        allow get: if isConversationParticipant();
+        allow list: if isConversationParticipant();
+        
+        // Only create messages if conversation is active
+        allow create: if isConversationParticipant() 
+                      && isConversationActive()
+                      && request.resource.data.senderId == request.auth.uid;
+        
+        // Allow updating only to mark as read
+        allow update: if isConversationParticipant() && isMarkingAsRead();
+        
+        allow delete: if false; // Messages are immutable
+      }
+    }
+
+    /**
+     * @description Controls access to chat/friend request documents.
+     * @path /chatRequests/{requestId}
+     * @allow (create) Sender can create requests with status 'pending'.
+     * @allow (get) Sender or recipient can read the request.
+     * @allow (list) Users can list requests where they are sender or recipient (filtered by query).
+     * @allow (update) Only recipient can update to accept/reject pending requests.
+     * @allow (delete) Only sender can delete their own pending requests.
+     * @principle Implements approval workflow for chat requests.
+     */
+    match /chatRequests/{requestId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isSender() {
+        return isSignedIn() && request.auth.uid == resource.data.fromUserId;
+      }
+
+      function isRecipient() {
+        return isSignedIn() && request.auth.uid == resource.data.toUserId;
+      }
+
+      function isValidNewRequest() {
+        return request.resource.data.fromUserId == request.auth.uid
+               && request.resource.data.status == 'pending'
+               && request.resource.data.keys().hasAll(['fromUserId', 'toUserId', 'conversationId', 'status', 'createdAt']);
+      }
+
+      function isValidStatusChange() {
+        return resource.data.status == 'pending'
+               && request.resource.data.status in ['accepted', 'rejected']
+               && isRecipient();
+      }
+
+      // Read: sender or recipient can read
+      allow get: if isSender() || isRecipient();
+      
+      // List: users can list their requests (query must filter by fromUserId or toUserId)
+      allow list: if isSignedIn();
+      
+      // Create: only sender can create with status 'pending'
+      allow create: if isSignedIn() && isValidNewRequest();
+      
+      // Update: only recipient can accept/reject pending requests
+      allow update: if isValidStatusChange();
+      
+      // Delete: only sender can delete their own pending requests
+      allow delete: if isSender() && resource.data.status == 'pending';
+    }
+
+    /**
+     * @description Controls access to live location sharing documents.
+     * @path /liveLocations/{locationId}
+     * @allow (create) User can create ONLY if they have mutual permission (locationSharingWith).
+     * @allow (get) User can read live locations they created or that are shared with them.
+     * @allow (list) Users can list live locations relevant to them (filtered by query).
+     * @allow (update) Only the owner can update their live location (if still has permission).
+     * @allow (delete) Only the owner can delete their live location.
+     * @principle Enforces mutual permission before allowing real-time location sharing.
+     */
+    match /liveLocations/{locationId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner() {
+        return isSignedIn() && request.auth.uid == resource.data.userId;
+      }
+
+      function isOwnerOfNew() {
+        return isSignedIn() && request.auth.uid == request.resource.data.userId;
+      }
+
+      function isSharedWith() {
+        return isSignedIn() && request.auth.uid == resource.data.sharedWith;
+      }
+
+      // Verificar permiso mutuo: ambos usuarios deben haberse aceptado
+      function hasMutualPermission() {
+        let myDoc = get(/databases/$(database)/documents/users/$(request.auth.uid));
+        let otherDoc = get(/databases/$(database)/documents/users/$(request.resource.data.sharedWith));
+        
+        // Verificar que yo tenga al otro en mi lista Y que el otro me tenga en su lista
+        return request.resource.data.sharedWith in myDoc.data.locationSharingWith
+               && request.auth.uid in otherDoc.data.locationSharingWith;
+      }
+
+      function isValidNewLocation() {
+        return request.resource.data.userId == request.auth.uid
+               && request.resource.data.sharedWith is string
+               && request.resource.data.isActive == true
+               && request.resource.data.latitude is number
+               && request.resource.data.longitude is number;
+      }
+
+      // Read: owner or person it's shared with can read
+      allow get: if isOwner() || isSharedWith();
+      
+      // List: users can list locations where they are owner or recipient (query must filter)
+      allow list: if isSignedIn();
+      
+      // Create: REQUIERE PERMISO MUTUO
+      allow create: if isSignedIn() && isValidNewLocation() && hasMutualPermission();
+      
+      // Update: REQUIERE PERMISO MUTUO y ser el dueño
+      allow update: if isOwnerOfNew() && isValidNewLocation() && hasMutualPermission();
+      
+      // Delete: only owner can delete their live location
+      allow delete: if isOwner();
+    }
+  }
+}

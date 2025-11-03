@@ -1,0 +1,58 @@
+{
+  "placeholderImages": [
+    {
+      "id": "user-1",
+      "description": "Avatar for Sarah",
+      "imageUrl": "https://images.unsplash.com/photo-1546961329-78bef0414d7c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8d29tYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjEwNTYyNDd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman portrait"
+    },
+    {
+      "id": "user-2",
+      "description": "Avatar for Alex",
+      "imageUrl": "https://images.unsplash.com/photo-1568602471122-7832951cc4c5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw4fHxtYW4lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NjEwMTgyNDR8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man portrait"
+    },
+    {
+      "id": "user-3",
+      "description": "Avatar for Maria",
+      "imageUrl": "https://images.unsplash.com/photo-1592621385612-4d7129426394?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx3b21hbiUyMHNtaWxpbmd8ZW58MHx8fHwxNzYxMDMyOTIyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman smiling"
+    },
+    {
+      "id": "user-4",
+      "description": "Avatar for David",
+      "imageUrl": "https://images.unsplash.com/photo-1576110598658-096ae24cdb97?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxtYW4lMjBnbGFzc2VzfGVufDB8fHx8MTc2MDk2OTY3OXww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man glasses"
+    },
+    {
+      "id": "user-5",
+      "description": "Avatar for Emily",
+      "imageUrl": "https://images.unsplash.com/photo-1463062511209-f7aa591fa72f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHx3b21hbiUyMG5hdHVyZXxlbnwwfHx8fDE3NjEwMzc4MDB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman nature"
+    },
+    {
+      "id": "user-6",
+      "description": "Avatar for John",
+      "imageUrl": "https://images.unsplash.com/photo-1612387050703-685c779375d4?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxfHxtYW4lMjBjaXR5fGVufDB8fHx8MTc2MDk3OTMyNHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man city"
+    },
+    {
+      "id": "user-7",
+      "description": "Avatar for Jessica",
+      "imageUrl": "https://images.unsplash.com/photo-1550960955-54f69f45a89c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHx3b21hbiUyMGNvZmZlZXxlbnwwfHx8fDE3NjA5NTk1NTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "woman coffee"
+    },
+    {
+      "id": "user-8",
+      "description": "Avatar for Michael",
+      "imageUrl": "https://images.unsplash.com/photo-1527718755910-54cac9d44cc5?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxtYW4lMjBvdXRkb29yfGVufDB8fHx8MTc2MDk1ODI3MHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "man outdoor"
+    },
+    {
+      "id": "current-user",
+      "description": "Avatar for the current user",
+      "imageUrl": "https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxwZXJzb24lMjBzbWlsaW5nfGVufDB8fHx8MTc2MDk1NTA4Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "person smiling"
+    }
+  ]
+}

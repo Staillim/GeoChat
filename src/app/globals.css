@@ -1,0 +1,397 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* 🎨 Tema Azul Claro y Blanco */
+    --background: 210 40% 98%;
+    --foreground: 215 25% 27%;
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 27%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 27%;
+    --primary: 200 98% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 100% 95%;
+    --secondary-foreground: 215 25% 27%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 195 100% 85%;
+    --accent-foreground: 215 25% 27%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 200 98% 60%;
+    --radius: 0.75rem;
+    --chart-1: 200 98% 60%;
+    --chart-2: 195 100% 85%;
+    --chart-3: 210 100% 95%;
+    --chart-4: 190 90% 70%;
+    --chart-5: 205 95% 75%;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 25% 27%;
+    --sidebar-primary: 200 98% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 100% 95%;
+    --sidebar-accent-foreground: 215 25% 27%;
+    --sidebar-border: 214 32% 91%;
+    --sidebar-ring: 200 98% 60%;
+  }
+ 
+  .dark {
+    /* 🌙 Tema Oscuro con Azules Profundos */
+    --background: 215 28% 17%;
+    --foreground: 210 40% 98%;
+    --card: 215 28% 20%;
+    --card-foreground: 210 40% 98%;
+    --popover: 215 28% 20%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 200 98% 60%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 215 30% 25%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 30% 25%;
+    --muted-foreground: 215 20% 65%;
+    --accent: 195 85% 45%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 63% 31%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 215 30% 25%;
+    --input: 215 30% 25%;
+    --ring: 200 98% 60%;
+    --chart-1: 200 98% 60%;
+    --chart-2: 195 85% 45%;
+    --chart-3: 210 80% 50%;
+    --chart-4: 190 70% 55%;
+    --chart-5: 205 75% 65%;
+    --sidebar-background: 215 28% 20%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 200 98% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 215 30% 25%;
+    --sidebar-accent-foreground: 210 40% 98%;
+    --sidebar-border: 215 30% 25%;
+    --sidebar-ring: 200 98% 60%;
+  }
+}
+ 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* 🎨 Animaciones Avanzadas */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%) translateY(-100%) rotate(45deg);
+  }
+  100% {
+    transform: translateX(100%) translateY(100%) rotate(45deg);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.1);
+  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes particle-float {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-100px) translateX(20px);
+    opacity: 0;
+  }
+}
+
+@keyframes rotate-slow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes sparkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-in-bounce {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(10%);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(56, 189, 248, 0.6), 0 0 60px rgba(56, 189, 248, 0.4);
+  }
+}
+
+/* 🌟 Clases Utilitarias para Efectos */
+@layer utilities {
+  .shimmer-effect {
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .shimmer-effect::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+      45deg,
+      transparent 30%,
+      rgba(56, 189, 248, 0.2) 50%,
+      transparent 70%
+    );
+    animation: shimmer 3s infinite;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .dark .shimmer-effect::before {
+    background: linear-gradient(
+      45deg,
+      transparent 30%,
+      rgba(56, 189, 248, 0.15) 50%,
+      transparent 70%
+    );
+  }
+
+  .floating-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(40px);
+    opacity: 0.4;
+    animation: pulse-glow 4s ease-in-out infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .gradient-border {
+    position: relative;
+    background: linear-gradient(var(--card), var(--card)) padding-box,
+                linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))) border-box;
+    border: 2px solid transparent;
+  }
+
+  .hover-lift {
+    transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275), 
+                box-shadow 0.4s ease;
+  }
+
+  .hover-lift:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 20px 50px rgba(56, 189, 248, 0.3);
+  }
+
+  .dark .hover-lift:hover {
+    box-shadow: 0 20px 50px rgba(56, 189, 248, 0.5);
+  }
+
+  .glow-effect {
+    box-shadow: 0 0 25px rgba(56, 189, 248, 0.4);
+    animation: glow-pulse 3s ease-in-out infinite;
+  }
+
+  .dark .glow-effect {
+    box-shadow: 0 0 30px rgba(56, 189, 248, 0.6);
+  }
+
+  .sparkle {
+    position: relative;
+  }
+
+  .sparkle::after {
+    content: '✨';
+    position: absolute;
+    top: -10px;
+    right: -10px;
+    font-size: 20px;
+    animation: sparkle 2s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .glass-effect {
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+  }
+
+  .dark .glass-effect {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+  }
+}
+
+/* 🎪 Efectos de Hover Personalizados */
+.card-hover-effect {
+  position: relative;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.card-hover-effect::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at var(--mouse-x, 50%) var(--mouse-y, 50%),
+    rgba(var(--primary-rgb), 0.1) 0%,
+    transparent 50%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.card-hover-effect:hover::after {
+  opacity: 1;
+}
+
+/* 💫 Partículas */
+.particles-container {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.particle {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: radial-gradient(circle, currentColor, transparent);
+  border-radius: 50%;
+  animation: particle-float 3s ease-in-out infinite;
+}
+
+/* 🌈 Gradientes Predefinidos - Tema Azul */
+.gradient-cyan-blue {
+  background: linear-gradient(135deg, #38bdf8 0%, #3b82f6 100%);
+}
+
+.gradient-sky-indigo {
+  background: linear-gradient(135deg, #7dd3fc 0%, #6366f1 100%);
+}
+
+.gradient-blue-cyan {
+  background: linear-gradient(135deg, #60a5fa 0%, #22d3ee 100%);
+}
+
+.gradient-light-blue {
+  background: linear-gradient(135deg, #bfdbfe 0%, #dbeafe 100%);
+}
+
+.gradient-ice-blue {
+  background: linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 100%);
+}
+
+.gradient-azure-sky {
+  background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+}
+
+.gradient-animated {
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+
+/* Ocultar scrollbar pero mantener funcionalidad */
+/* Para Chrome, Safari y Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Para Firefox */
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+
+/* Para IE y Edge */
+.hide-scrollbar {
+  -ms-overflow-style: none;
+}
+
+/* Scrollbar personalizado con tema azul para área de mensajes */
+/* Para Chrome, Safari y Opera */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.3);
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.5);
+}
+
+/* Para Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.3) transparent;
+}
