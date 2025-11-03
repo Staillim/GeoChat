@@ -36,6 +36,7 @@ service cloud.firestore {
      * @allow (list) Any authenticated user can list users (for map display).
      * @allow (update) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can update their account.
      * @allow (update) Any user can send location sharing request by adding their UID to locationSharingRequests array.
+     * @allow (update) Any user can accept location sharing request by adding their UID to locationSharingWith array (mutual permission).
      * @allow (delete) User 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1' can delete their account.
      * @deny (create) User 'attackerId' cannot create an account with userId 'hnG1KG4hnQgTfs6KpCX4JGxiZZl1'.
      * @principle Enforces document ownership for writes, but allows authenticated users to read for map functionality.
@@ -69,10 +70,26 @@ service cloud.firestore {
                );
       }
 
+      // Permite que al aceptar una solicitud, se establezca el permiso mutuo
+      function isAcceptingLocationRequest() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['locationSharingWith'])
+               && (
+                 // Si el campo no existía antes, permitir crear array con solo mi UID
+                 (!('locationSharingWith' in resource.data) 
+                  && request.resource.data.locationSharingWith.size() == 1 
+                  && request.resource.data.locationSharingWith[0] == request.auth.uid)
+                 ||
+                 // Si ya existía, verificar que solo se agregó mi UID
+                 ('locationSharingWith' in resource.data
+                  && request.resource.data.locationSharingWith.toSet().difference(resource.data.locationSharingWith.toSet()).size() == 1
+                  && request.resource.data.locationSharingWith.toSet().difference(resource.data.locationSharingWith.toSet()).hasOnly([request.auth.uid]))
+               );
+      }
+
       allow get: if isSignedIn(); // Allow any authenticated user to read user profiles
       allow list: if isSignedIn(); // Allow any authenticated user to list users for map
       allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isExistingOwner(userId) || isAddingLocationRequest(); // Owner or adding location request
+      allow update: if isExistingOwner(userId) || isAddingLocationRequest() || isAcceptingLocationRequest(); // Owner or adding/accepting location request
       allow delete: if isExistingOwner(userId);
     }
 

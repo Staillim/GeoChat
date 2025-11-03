@@ -110,12 +110,20 @@ export function useLocationSharingPermission(
 
     try {
       const myRef = doc(firestore, 'users', currentUserId);
+      const otherRef = doc(firestore, 'users', otherUserId);
+      
+      // Actualizar MI documento: quitar solicitud y agregar permiso
       await updateDoc(myRef, {
         locationSharingRequests: arrayRemove(otherUserId),
         locationSharingWith: arrayUnion(otherUserId),
       });
 
-      console.log('✅ Solicitud aceptada');
+      // Actualizar documento del OTRO: agregar permiso mutuo
+      await updateDoc(otherRef, {
+        locationSharingWith: arrayUnion(currentUserId),
+      });
+
+      console.log('✅ Solicitud aceptada - Permiso mutuo establecido');
       
       // Actualizar estado inmediatamente
       setTimeout(async () => {
