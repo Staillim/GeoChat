@@ -138,23 +138,26 @@ export function useLiveLocationSharing(
             await updateLocation(latitude, longitude);
             setIsSharing(true);
 
-            // Configurar actualizaciones automáticas
-            const id = navigator.geolocation.watchPosition(
-              (position) => {
-                updateLocation(position.coords.latitude, position.coords.longitude);
-              },
-              (error) => {
-                console.error('Error watching location:', error);
-              },
-              {
-                enableHighAccuracy: true,
-                maximumAge: 30000,
-                timeout: 27000,
-              }
-            );
+            // Configurar actualizaciones cada 1 minuto (60000 ms)
+            const intervalId = setInterval(() => {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  updateLocation(position.coords.latitude, position.coords.longitude);
+                },
+                (error) => {
+                  console.error('Error obteniendo ubicación:', error);
+                },
+                {
+                  enableHighAccuracy: true,
+                  timeout: 10000,
+                  maximumAge: 0,
+                }
+              );
+            }, 60000); // 1 minuto
 
-            setWatchId(id);
-            console.log('🚀 Ubicación en tiempo real activada');
+            // Guardar el ID del intervalo (convertir a number para compatibilidad)
+            setWatchId(intervalId as unknown as number);
+            console.log('🚀 Ubicación en tiempo real activada (actualización cada 1 minuto)');
             resolve();
           } catch (err) {
             reject(err);
@@ -180,7 +183,7 @@ export function useLiveLocationSharing(
   // Detener compartir
   const stopSharing = useCallback(async () => {
     if (watchId !== null) {
-      navigator.geolocation.clearWatch(watchId);
+      clearInterval(watchId); // Cambiar clearWatch por clearInterval
       setWatchId(null);
     }
 
@@ -217,19 +220,23 @@ export function useLiveLocationSharing(
       setIsSharing(isActive);
 
       if (isActive && !watchId && navigator.geolocation) {
-        // Restaurar watchPosition
-        const id = navigator.geolocation.watchPosition(
-          (position) => {
-            updateLocation(position.coords.latitude, position.coords.longitude);
-          },
-          () => {},
-          {
-            enableHighAccuracy: true,
-            maximumAge: 30000,
-            timeout: 27000,
-          }
-        );
-        setWatchId(id);
+        // Restaurar intervalo de actualización cada 1 minuto
+        const intervalId = setInterval(() => {
+          navigator.geolocation.getCurrentPosition(
+            (position) => {
+              updateLocation(position.coords.latitude, position.coords.longitude);
+            },
+            (error) => {
+              console.error('Error obteniendo ubicación:', error);
+            },
+            {
+              enableHighAccuracy: true,
+              timeout: 10000,
+              maximumAge: 0,
+            }
+          );
+        }, 60000); // 1 minuto
+        setWatchId(intervalId as unknown as number);
       }
     });
 
@@ -240,7 +247,7 @@ export function useLiveLocationSharing(
   useEffect(() => {
     return () => {
       if (watchId !== null) {
-        navigator.geolocation.clearWatch(watchId);
+        clearInterval(watchId); // Cambiar clearWatch por clearInterval
       }
     };
   }, [watchId]);
